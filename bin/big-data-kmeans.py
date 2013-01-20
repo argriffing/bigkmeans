@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 """
 This is a script that uses the bigkmeans python module.
 

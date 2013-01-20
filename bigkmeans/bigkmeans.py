@@ -9,29 +9,11 @@ from numpy import testing
 
 import bigkmeanscore
 
+__all__ = [
+        'kmeans',
+        'kmeans_ooc',
+        ]
 
-def _lines_to_ndarray_2d(lines):
-    """
-    This is a hack because np.loadtxt and np.fromfile are not quite right.
-    The problem with np.loadtxt is that it is too slow,
-    and the problem with np.fromfile is that it does not let you
-    make 2d arrays without knowing the shape beforehand.
-    """
-    return np.array(
-            [[float(x) for x in line.split()] for line in lines],
-            dtype=float)
-
-def lloyd_update_block(
-        data, curr_centroids, next_centroids, labels, cluster_sizes):
-    """
-    @param data: an ndarray representing a data block of a few observations
-    @param curr_centroids: all current centroids
-    @param next_centroids: all next centroids (to be filled)
-    @param labels: data labels (to be filled)
-    @param cluster_sizes: cluster sizes (to be filled)
-    """
-    bigkmeanscore.update_labels(data, curr_centroids, labels, cluster_sizes)
-    bigkmeanscore.update_centroids(data, next_centroids, labels)
 
 def kmeans(data, guess, niters):
     """
@@ -91,6 +73,31 @@ def kmeans_ooc(data_stream, niters, centroids=None, nclusters=None):
     if nclusters < 2:
         raise Exception('at least two clusters are required')
     return _kmeans_ooc_iterate(data_stream, centroids, niters)
+
+
+def _lines_to_ndarray_2d(lines):
+    """
+    This is a hack because np.loadtxt and np.fromfile are not quite right.
+    The problem with np.loadtxt is that it is too slow,
+    and the problem with np.fromfile is that it does not let you
+    make 2d arrays without knowing the shape beforehand.
+    """
+    return np.array(
+            [[float(x) for x in line.split()] for line in lines],
+            dtype=float)
+
+
+def lloyd_update_block(
+        data, curr_centroids, next_centroids, labels, cluster_sizes):
+    """
+    @param data: an ndarray representing a data block of a few observations
+    @param curr_centroids: all current centroids
+    @param next_centroids: all next centroids (to be filled)
+    @param labels: data labels (to be filled)
+    @param cluster_sizes: cluster sizes (to be filled)
+    """
+    bigkmeanscore.update_labels(data, curr_centroids, labels, cluster_sizes)
+    bigkmeanscore.update_centroids(data, next_centroids, labels)
 
 
 def _kmeans_ooc_scout(data_stream):
