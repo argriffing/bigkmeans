@@ -5,6 +5,22 @@ This is a Cython-enhanced out-of-core Forgy-initialized
 Lloyd's algorithm kmeans implementation for Big Data.
 
 
+why this program is so awesome
+------------------------------
+
+Theoretically it will work on data files
+that contain many observations.
+Other programs that try to hold all of the data in memory at once
+will have a bad time if the data is huge enough.
+But this program will only use a small amount of memory
+even when the number of observations is large.
+If you only have a few data points that you want to cluster,
+then using this program would be kind of dumb;
+you should use R or something instead --
+http://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html
+.
+
+
 how to install
 --------------
 
