@@ -13,7 +13,6 @@ from cython.view cimport array as cvarray
 import numpy as np
 cimport numpy as np
 cimport cython
-#from libc.math cimport log
 
 np.import_array()
 
@@ -38,8 +37,17 @@ def update_labels(
         np.float64_t [:, :] data_points,
         np.float64_t [:, :] centroids,
         np.int_t [:] labels,
-        np.int_t [:] cluster_sizes,
+        np.int_t [:] curr_cluster_sizes,
+        np.int_t [:] next_cluster_sizes,
         ):
+    """
+    @param data_points: each row is an observation
+    @param centroids: each row is a centroid
+    @param labels: update these assignments
+    @param curr_cluster_sizes: this lets us avoid comparisons to empty clusters
+    @param next_cluster_sizes: accumulate cluster counts into this array
+    @return: residual sum of squares
+    """
     cdef long ncentroids = centroids.shape[0]
     cdef long ndims = centroids.shape[1]
     cdef long npoints = data_points.shape[0]
@@ -48,10 +56,13 @@ def update_labels(
     cdef double best_centroid_dsquared
     cdef double dsquared
     cdef double delta
+    cdef double rss = 0
     for i in range(npoints):
         best_centroid_index = -1
         best_centroid_dsquared = -1
         for j in range(ncentroids):
+            if not curr_cluster_sizes[j]:
+                continue
             dsquared = 0
             for k in range(ndims):
                 delta = data_points[i, k] - centroids[j, k]
@@ -59,7 +70,8 @@ def update_labels(
             if best_centroid_index == -1 or dsquared < best_centroid_dsquared:
                 best_centroid_index = j
                 best_centroid_dsquared = dsquared
+        rss += best_centroid_dsquared
         labels[i] = best_centroid_index
-        cluster_sizes[best_centroid_index] += 1
-    return None
+        next_cluster_sizes[best_centroid_index] += 1
+    return rss
 

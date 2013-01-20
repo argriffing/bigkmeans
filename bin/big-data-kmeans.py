@@ -112,3 +112,4 @@ if __name__ == '__main__':
     parser.add_argument('--centroids-out',
             help='write the centroids to this file')
     main(parser.parse_args())
+

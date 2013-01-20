@@ -14,11 +14,17 @@ Other programs that try to hold all of the data in memory at once
 will have a bad time if the data is huge enough.
 But this program will only use a small amount of memory
 even when the number of observations is large.
+
+
+if you have small data then you should use something else
+---------------------------------------------------------
+
 If you only have a few data points that you want to cluster,
 then using this program would be kind of dumb;
-you should use R or something instead --
-http://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html
-.
+you should use R or something instead.
+
+ * R -- http://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html
+ * SciPy (Python) -- http://docs.scipy.org/doc/scipy/reference/cluster.vq.html
 
 
 how to install
@@ -36,8 +42,24 @@ It requires newish versions of the following ingredients:
 Presumably all of these dependencies exist for most operating systems.
 
 
-example
--------
+optional packages for advanced usage
+------------------------------------
+
+Running kmeans on a long sequence of observations
+is probably going to be I/O limited rather than CPU limited.
+To reduce the I/O slowness,
+you can use HDF technologies
+( http://www.hdfgroup.org/ )
+to store your data in a way that allows faster processing
+than tabular text formats.
+Support for this format is enabled in bigkmeans if the h5py
+package has been installed.
+
+ * h5py -- http://code.google.com/p/h5py/
+
+
+basic example
+-------------
 
 The web page
 http://mnemstudio.org/clustering-k-means-example-1.htm
@@ -64,7 +86,8 @@ in a file called `initial.txt`:
 Now that these two files have been created,
 you can analyze the observations using the command
 
-`big-data-kmeans.py --niters 2 --data data.txt --initial initial.txt`
+`big-data-kmeans.py --niters 2
+	--tabular-data-file data.txt --initial initial.txt`
 
 which should show the cluster assignments
 
@@ -79,7 +102,9 @@ which should show the cluster assignments
 If you want the script to also show the centroids,
 you can specify an output file using the command
 
-`big-data-kmeans.py --niters 2 --data data.txt --initial initial.txt
+`big-data-kmeans.py --niters 2
+	--tabular-data-file data.txt
+	--initial initial.txt
 	--centroids-out centroids.txt`
 
 which should write the centroids into a file that looks like
@@ -94,9 +119,11 @@ its command line options using the command
 
 which should show something like
 
-
-	usage: big-data-kmeans.py [-h] --niters NITERS [--nclusters NCLUSTERS] --data
-				  DATA [--initial-centroids INITIAL_CENTROIDS]
+	usage: big-data-kmeans.py [-h]
+				  (--nclusters NCLUSTERS | --initial-centroids INITIAL_CENTROIDS)
+				  (--tabular-data-file TABULAR_DATA_FILE | --hdf-data-file HDF_DATA_FILE)
+				  --niters NITERS
+				  [--hdf-dataset-name HDF_DATASET_NAME]
 				  [--labels-out LABELS_OUT]
 				  [--centroids-out CENTROIDS_OUT]
 
@@ -106,12 +133,20 @@ which should show something like
 
 	optional arguments:
 	  -h, --help            show this help message and exit
-	  --niters NITERS       do this many iterations of the Lloyd algorithm
 	  --nclusters NCLUSTERS
 				use this many clusters
-	  --data DATA           each row of this large data file is an observation
 	  --initial-centroids INITIAL_CENTROIDS
 				each row of this optional file is an initial centroid
+	  --tabular-data-file TABULAR_DATA_FILE
+				each row of this large tabular text file is an
+				observation
+	  --hdf-data-file HDF_DATA_FILE
+				each row of a dataset in this hdf file is an
+				observation
+	  --niters NITERS       do this many iterations of the Lloyd algorithm
+	  --hdf-dataset-name HDF_DATASET_NAME
+				specify the name of the dataset within the hdf data
+				file
 	  --labels-out LABELS_OUT
 				write the labels to this file (default is stdout)
 	  --centroids-out CENTROIDS_OUT
