@@ -51,7 +51,6 @@ def kmeans(data, guess, niters):
 
 def kmeans_ooc(data_stream, niters, centroids=None, nclusters=None):
     """
-    If an initial cluster
     @param data_stream: a restartable stream of data
     @param niters: do this many Lloyd iterations
     @param centroids: the initial centroids as a shape (nclusters, N) ndarray
