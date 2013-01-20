@@ -15,6 +15,12 @@ import numpy as np
 
 import bigkmeans
 
+try:
+    import h5py
+except ImportError:
+    h5py = None
+
+
 
 def pos_int(x):
     x = int(x)
@@ -34,13 +40,37 @@ def main(args):
     # Note that we deliberately disallow using stdin
     # because we require that the stream can be restarted
     # so that we can do one pass through the open file per iteration.
-    with open(args.data) as data_stream:
-        guess, centroids, labels = bigkmeans.kmeans_ooc(
-                data_stream,
+    if args.tabular_data_file:
+        with open(args.tabular_data_file) as data_stream:
+            guess, centroids, labels = bigkmeans.kmeans_ooc(
+                    data_stream,
+                    args.niters,
+                    centroids=guess,
+                    nclusters=args.nclusters,
+                    )
+    elif args.hdf_data_file:
+        if not h5py:
+            raise ImportError(
+                    'sorry I cannot deal with hdf5 data files '
+                    'unless the python package h5py is installed')
+        if not args.hdf_dataset_name:
+            raise Exception(
+                    'If the data is in hdf format '
+                    'then an hdf dataset name (--hdf-dataset-name) '
+                    'must be specified '
+                    'in addition to the name of the hdf file.  '
+                    'If you do not know the dataset name, '
+                    'then you can try to use the program called hdfview '
+                    'to search for your dataset within your hdf file.')
+        f = h5py.File(args.hdf_data_file, 'r')
+        dset = f[args.hdf_dataset_name]
+        guess, centroids, labels = bigkmeans.kmeans_hdf(
+                dset,
                 args.niters,
                 centroids=guess,
                 nclusters=args.nclusters,
                 )
+        f.close()
 
     # write the labels to stdout or to a user-specified file
     if args.labels_out == '-':
@@ -57,17 +87,28 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+
+    # initialize the cluster centroids
+    centroid_init = parser.add_mutually_exclusive_group(required=True)
+    centroid_init.add_argument('--nclusters', type=pos_int,
+            help='use this many clusters')
+    centroid_init.add_argument('--initial-centroids',
+            help='each row of this optional file is an initial centroid')
+
+    # define the data file
+    data_defn = parser.add_mutually_exclusive_group(required=True)
+    data_defn.add_argument('--tabular-data-file',
+            help='each row of this large tabular text file is an observation')
+    data_defn.add_argument('--hdf-data-file',
+            help='each row of a dataset in this hdf file is an observation')
+
     parser.add_argument('--niters', type=pos_int, required=True,
             help='do this many iterations of the Lloyd algorithm')
-    parser.add_argument('--nclusters', type=pos_int,
-            help='use this many clusters')
-    parser.add_argument('--data', required=True,
-            help='each row of this large data file is an observation')
-    parser.add_argument('--initial-centroids',
-            help='each row of this optional file is an initial centroid')
+
+    parser.add_argument('--hdf-dataset-name',
+            help='specify the name of the dataset within the hdf data file')
     parser.add_argument('--labels-out', default='-',
             help='write the labels to this file (default is stdout)')
     parser.add_argument('--centroids-out',
             help='write the centroids to this file')
     main(parser.parse_args())
-

@@ -9,10 +9,21 @@ from numpy import testing
 
 import bigkmeanscore
 
+
 __all__ = [
         'kmeans',
+        'kmeans_hdf',
         'kmeans_ooc',
         ]
+
+# This constant is for buffering data.
+# The Cython kmeans implementation acts on this many observations at a time
+# to update the numpy arrays.
+# If this number is too small, then the numpy conversion and cython call
+# will be made too frequently and will cause slowness.
+# If this number is too big, then the computer will try to bite off
+# a chunk of memory that is too big for the RAM.
+ROWS_PER_BLOCK = 8192
 
 
 def kmeans(data, guess, niters):
@@ -49,8 +60,35 @@ def kmeans(data, guess, niters):
     return curr_centroids, labels
 
 
+def kmeans_hdf(dset, niters, centroids=None, nclusters=None):
+    """
+    The input dset is from an open hdf file.
+    The returned values are in plain numpy format, not hdf format.
+    Also the initial centroids are assumed to be in plain numpy format.
+    @param dset: an hdf data set
+    @param centroids: the initial centroids as a shape (nclusters, N) ndarray
+    @param nclusters: the requested number of clusters
+    @return: initial_centroids, estimated_centroids, labels
+    """
+    if (centroids, nclusters).count(None) != 1:
+        raise Exception(
+                'either the initial centroids '
+                'or a requested number of clusters '
+                'must be provided, but not both')
+    if centroids is None:
+        M, N = dset.shape
+        random_indices = sorted(random.sample(xrange(M), nclusters))
+        centroids = dset[random_indices, :]
+    else:
+        nclusters = centroids.shape[1]
+    if nclusters < 2:
+        raise Exception('at least two clusters are required')
+    return _kmeans_hdf_iterate(dset, centroids, niters)
+
+
 def kmeans_ooc(data_stream, niters, centroids=None, nclusters=None):
     """
+    The input data stream is an open plain tabular text file without metadata.
     @param data_stream: a restartable stream of data
     @param niters: do this many Lloyd iterations
     @param centroids: the initial centroids as a shape (nclusters, N) ndarray
@@ -138,6 +176,63 @@ def _kmeans_ooc_init_centroids(data_stream, M, N, nclusters):
                 break
     return _lines_to_ndarray_2d(guess_lines)
 
+def _kmeans_hdf_iterate(dset, guess, niters):
+    """
+    @return guess, centroids, labels
+    """
+
+    if niters < 1:
+        raise Exception('not enough iterations')
+
+    # init some stuff
+    M, N = dset.shape
+    nclusters = guess.shape[0]
+    cluster_sizes = np.empty(nclusters, dtype=int)
+    curr_centroids = guess.copy()
+    next_centroids = guess.copy()
+
+    for i in range(niters):
+
+        # these arrays will be filled as the data blocks are processed
+        all_labels = []
+        next_centroids.fill(0)
+        cluster_sizes.fill(0)
+
+        # process the data stream block by block
+        j = 0
+        while True:
+
+            # read a few observations
+            start = j * ROWS_PER_BLOCK
+            stop = (j+1) * ROWS_PER_BLOCK
+            if start >= M:
+                break
+            #print 'requested selection: [%s : %s]' % (start, stop)
+            data = dset[start : stop]
+            #print 'shape of received data: %s' % str(data.shape)
+            #print
+            #if not sum(data.shape):
+                #break
+
+            M = data.shape[0]
+            labels = np.empty(M, dtype=int)
+
+            lloyd_update_block(
+                    data, curr_centroids, next_centroids, labels, cluster_sizes)
+            all_labels.extend(labels)
+
+            j += 1
+
+        if not all(cluster_sizes):
+            raise Exception('empty cluster')
+
+        next_centroids /= cluster_sizes[:, np.newaxis]
+
+        curr_centroids, next_centroids = next_centroids, curr_centroids
+
+    return guess, curr_centroids, np.array(all_labels, dtype=int)
+
+
 
 def _kmeans_ooc_iterate(data_stream, guess, niters):
     """
@@ -146,9 +241,6 @@ def _kmeans_ooc_iterate(data_stream, guess, niters):
 
     if niters < 1:
         raise Exception('not enough iterations')
-
-    # define a constant
-    rows_per_block = 1000
 
     # init some stuff
     nclusters, N = guess.shape
@@ -174,7 +266,7 @@ def _kmeans_ooc_iterate(data_stream, guess, niters):
             flat_data = np.fromfile(
                     data_stream,
                     dtype=float,
-                    count=rows_per_block*N,
+                    count=ROWS_PER_BLOCK*N,
                     sep=' ',
                     )
             if not sum(flat_data.shape):
