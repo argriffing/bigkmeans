@@ -2,13 +2,13 @@
 Unfortunately numpy.fromfile does not work with StringIO objects.
 """
 
-from StringIO import StringIO
 import random
 
 import numpy as np
 from numpy import testing
 
 import bigkmeanscore
+
 
 def _lines_to_ndarray_2d(lines):
     """
@@ -171,23 +171,10 @@ def _kmeans_ooc_iterate(data_stream, guess, niters):
                     count=rows_per_block*N,
                     sep=' ',
                     )
-            print 'read data with shape', np.shape(flat_data)
             if not sum(flat_data.shape):
                 break
 
             data = np.reshape(flat_data, (-1, N))
-
-            #lines = data_stream.readlines(8192)
-            #if not lines:
-                #break
-
-            # I wish loadtxt were more flexible to handle big data directly
-            #data = np.loadtxt(StringIO(''.join(lines)), ndmin=2)
-            #data = _lines_to_ndarray_2d(lines)
-            #if data.ndim != 2:
-                #raise Exception(
-                        #'expected ndim=2 but got shape ' + str(data.shape))
-
 
             M = data.shape[0]
             labels = np.empty(M, dtype=int)
