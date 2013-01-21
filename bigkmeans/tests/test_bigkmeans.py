@@ -5,10 +5,19 @@ import tempfile
 
 import numpy as np
 from numpy import testing
-import scipy.cluster
-import h5py
 
 import bigkmeans
+
+try:
+    import scipy.cluster as scipy_cluster
+except ImportError:
+    scipy_cluster = None
+
+try:
+    import h5py
+except ImportError:
+    h5py = None
+
 
 
 #http://www.math.uah.edu/stat/data/Fisher.txt
@@ -258,7 +267,7 @@ class Test_BigKmeans(testing.TestCase):
         f_stream = open(name_stream)
 
         # get the scipy kmeans results
-        vq_final_clust, vq_labels = scipy.cluster.vq.kmeans2(
+        vq_final_clust, vq_labels = scipy_cluster.vq.kmeans2(
                 data, guess, maxiters)
 
         # get the bigkmeans numpy results
@@ -296,19 +305,19 @@ class Test_BigKmeans(testing.TestCase):
         # check the labels after the first iteration
         maxiters = 1
         expected_labels_iters_1 = np.array([0, 0, 1, 1, 2, 2], dtype=int)
-        clust, labels = scipy.cluster.vq.kmeans2(data, guess, maxiters)
+        clust, labels = scipy_cluster.vq.kmeans2(data, guess, maxiters)
         testing.assert_array_equal(labels, expected_labels_iters_1)
 
         # check the labels after the second iteration
         maxiters = 2
         expected_labels_iters_2 = np.array([0, 0, 0, 2, 2, 2], dtype=int)
-        clust, labels = scipy.cluster.vq.kmeans2(data, guess, maxiters)
+        clust, labels = scipy_cluster.vq.kmeans2(data, guess, maxiters)
         testing.assert_array_equal(labels, expected_labels_iters_2)
 
         # check the labels after the third iteration
         maxiters = 3
         expected_labels_iters_3 = np.array([0, 0, 0, 2, 2, 2], dtype=int)
-        clust, labels = scipy.cluster.vq.kmeans2(data, guess, maxiters)
+        clust, labels = scipy_cluster.vq.kmeans2(data, guess, maxiters)
         testing.assert_array_equal(labels, expected_labels_iters_3)
 
         # check that all methods agree for multiple iterations
@@ -365,12 +374,12 @@ class Test_BigKmeans(testing.TestCase):
 
         # check the labels after the first iteration
         expected_labels_iters_1 = np.array([0, 0, 0, 1, 1, 1, 1], dtype=int)
-        clust, labels = scipy.cluster.vq.kmeans2(data, guess, 1)
+        clust, labels = scipy_cluster.vq.kmeans2(data, guess, 1)
         testing.assert_array_equal(labels, expected_labels_iters_1)
 
         # check the labels after the second iteration
         expected_labels_iters_2 = np.array([0, 0, 1, 1, 1, 1, 1], dtype=int)
-        clust, labels = scipy.cluster.vq.kmeans2(data, guess, 2)
+        clust, labels = scipy_cluster.vq.kmeans2(data, guess, 2)
         testing.assert_array_equal(labels, expected_labels_iters_2)
 
         # check that all methods agree for multiple iterations
@@ -415,7 +424,7 @@ class Test_BigKmeans(testing.TestCase):
         maxiters = 10
 
         # get the scipy kmeans results
-        vq_final_clust, vq_labels = scipy.cluster.vq.kmeans2(
+        vq_final_clust, vq_labels = scipy_cluster.vq.kmeans2(
                 data, guess, maxiters)
 
         # get the bigkmeans numpy results

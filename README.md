@@ -27,19 +27,16 @@ you should use R or something instead.
  * SciPy (Python) -- http://docs.scipy.org/doc/scipy/reference/cluster.vq.html
 
 
-how to install
-==============
-
 dependencies
 ------------
 
-You will need newish versions of the following projects:
+ * [Python](http://python.org/) 2.7+ (but not 3.x)
+ * [NumPy](http://www.numpy.org/)
+ * at least one of
+    - [pyvqcore](https://github.com/argriffing/pyvqcore)
+    - [SciPy](http://www.scipy.org/)
+    - [EPD](http://www.enthought.com/products/epd.php)
 
- * Python 2.7+ (but not 3.x) -- http://python.org/
- * Cython -- http://cython.org/
- * Numpy -- http://www.numpy.org/
-
-These should all be available for most operating systems.
 
 standard installation
 ---------------------
@@ -54,30 +51,20 @@ install using pip
 One of several python installation helpers is called
 pip -- http://www.pip-installer.org/ .
 You can use this to install directly from github
-using the following command.
+using the command
 
-`pip install https://github.com/argriffing/bigkmeans/zipball/master`
+`$ pip install --user https://github.com/argriffing/bigkmeans/zipball/master`
 
-You might have to separately install pip itself,
-and the pip command above may need to be
-run using some kind of administrator privileges.
+which can be reverted by
 
-The nice thing about using pip instead of the standard installer
-is that it allows you to easily uninstall the bigkmeans using the command
-
-`pip uninstall bigkmeans`
-
-if my kmeans clustering program is not working for you for some reason,
-which frankly will probably be the case.
+`$ pip uninstall bigkmeans`
 
 
 optional packages required for advanced usage
 ------------------------------------
 
-Running kmeans on a long sequence of observations
-is probably going to be I/O limited rather than CPU limited.
-To reduce the I/O slowness,
-you can use HDF technologies
+Running kmeans on a long sequence of observations may be I/O limited.
+To reduce the I/O slowness, you can use HDF technologies
 ( http://www.hdfgroup.org/ )
 to store your data in a way that allows faster processing
 than tabular text formats.
@@ -87,8 +74,14 @@ package has been installed.
  * h5py -- http://www.h5py.org/
 
 
+testing the installation
+------------------------
+
+`$ python -c "import bigkmeans; bigkmeans.test()"`
+
+
 basic example
-=============
+-------------
 
 The web page
 http://mnemstudio.org/clustering-k-means-example-1.htm
@@ -115,7 +108,7 @@ in a file called `initial.txt`:
 Now that these two files have been created,
 you can analyze the observations using the command
 
-`big-data-kmeans.py --maxiters 2
+`$ big-data-kmeans.py --maxiters 2
 	--tabular-data-file data.txt --initial-centroids initial.txt`
 
 which should show the cluster assignments
@@ -131,7 +124,7 @@ which should show the cluster assignments
 If you want the script to also show the centroids,
 you can specify an output file using the command
 
-`big-data-kmeans.py --maxiters 2
+`$ big-data-kmeans.py --maxiters 2
 	--tabular-data-file data.txt
 	--initial-centroids initial.txt
 	--centroids-out centroids.txt`
@@ -143,12 +136,12 @@ which should write the centroids into a file that looks like
 
 
 troubleshooting
-===============
+---------------
 
 If the script is giving you errors then you can try checking
 its command line options using the command
 
-`big-data-kmeans.py -h`
+`$ big-data-kmeans.py -h`
 
 which should show something like
 	

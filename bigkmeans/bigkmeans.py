@@ -17,10 +17,17 @@ import warnings
 import random
 
 import numpy as np
-from numpy import testing
 
-import bigkmeanscore
+try:
+    import pyvqcore
+except ImportError:
+    pyvqcore = None
 
+if not pyvqcore:
+    try:
+        import scipy.cluster as scipy_cluster
+    except ImportError:
+        scipy_cluster = None
 
 __all__ = [
         'kmeans',
@@ -347,10 +354,41 @@ def lloyd_update_block(
     @param labels: data labels (to be filled)
     @param curr_cluster_sizes: this is used only as an empty cluster mask
     @param next_cluster_sizes: cluster sizes (to be filled)
+    @return: residue sum of squares
     """
-    rss = bigkmeanscore.update_labels(
-            data, curr_centroids, labels,
-            curr_cluster_sizes, next_cluster_sizes)
-    bigkmeanscore.update_centroids(data, next_centroids, labels)
+
+    #FIXME: This function should eventually be broken into three
+    #       separate functions which are unit-tested against each other.
+
+    # Try using a custom C extension if available.
+    if pyvqcore:
+        rss = pyvqcore.update_labels(
+                data, curr_centroids, labels,
+                curr_cluster_sizes, next_cluster_sizes)
+        pyvqcore.update_centroids(data, next_centroids, labels)
+
+    # Fall back to a scipy.cluster function if available.
+    # This is slightly less vectorized, but still OK.
+    elif scipy_cluster:
+
+        # Get the codebook index array and a distance array.
+        index_arr, distortion_arr = scipy_cluster.vq.vq(data, curr_centroids)
+        rss = sum(np.square(distortion_arr))
+
+        # update the labels and the next cluster sizes
+        labels[...] = index_arr
+        for cluster_index in labels:
+            next_cluster_sizes[cluster_index] += 1
+
+        # update the next centroids
+        for i, row in enumerate(data):
+            next_centroids[labels[i]] += row
+
+    # Fall back to a pure python and numpy implementation
+    # as a last resort.
+    else:
+        raise NotImplementedError
+
+    # return the residue sum of squares
     return rss
 
