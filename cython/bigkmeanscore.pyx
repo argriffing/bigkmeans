@@ -16,7 +16,7 @@ cimport cython
 
 np.import_array()
 
-@cython.boundscheck(False)
+#@cython.boundscheck(False)
 @cython.wraparound(False)
 def update_centroids(
         np.float64_t [:, :] data_points,
@@ -31,7 +31,8 @@ def update_centroids(
             centroids[labels[i], k] += data_points[i, k]
     return None
 
-@cython.boundscheck(False)
+
+#@cython.boundscheck(False)
 @cython.wraparound(False)
 def update_labels(
         np.float64_t [:, :] data_points,
@@ -57,6 +58,10 @@ def update_labels(
     cdef double dsquared
     cdef double delta
     cdef double rss = 0
+    if curr_cluster_sizes.shape[0] != ncentroids:
+        raise ValueError
+    if next_cluster_sizes.shape[0] != ncentroids:
+        raise ValueError
     for i in range(npoints):
         best_centroid_index = -1
         best_centroid_dsquared = -1

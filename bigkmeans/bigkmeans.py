@@ -231,7 +231,7 @@ def generic_kmeans(
     if centroids is None:
         centroids = fn_get_random_guess(data_object, M, N, nclusters)
     else:
-        nclusters = centroids.shape[1]
+        nclusters = centroids.shape[0]
 
     #TODO: begin loop for cluster-loss restarting
 
