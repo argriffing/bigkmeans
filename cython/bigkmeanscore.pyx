@@ -16,7 +16,7 @@ cimport cython
 
 np.import_array()
 
-#@cython.boundscheck(False)
+@cython.boundscheck(False)
 @cython.wraparound(False)
 def update_centroids(
         np.float64_t [:, :] data_points,
@@ -32,7 +32,7 @@ def update_centroids(
     return None
 
 
-#@cython.boundscheck(False)
+@cython.boundscheck(False)
 @cython.wraparound(False)
 def update_labels(
         np.float64_t [:, :] data_points,

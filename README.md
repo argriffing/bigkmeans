@@ -42,7 +42,7 @@ It requires newish versions of the following ingredients:
 Presumably all of these dependencies exist for most operating systems.
 
 
-optional packages for advanced usage
+optional packages required for advanced usage
 ------------------------------------
 
 Running kmeans on a long sequence of observations
@@ -52,10 +52,10 @@ you can use HDF technologies
 ( http://www.hdfgroup.org/ )
 to store your data in a way that allows faster processing
 than tabular text formats.
-Support for this format is enabled in bigkmeans if the h5py
+Support for this format is enabled if the h5py
 package has been installed.
 
- * h5py -- http://code.google.com/p/h5py/
+ * h5py -- http://www.h5py.org/
 
 
 basic example
@@ -86,8 +86,8 @@ in a file called `initial.txt`:
 Now that these two files have been created,
 you can analyze the observations using the command
 
-`big-data-kmeans.py --niters 2
-	--tabular-data-file data.txt --initial initial.txt`
+`big-data-kmeans.py --maxiters 2
+	--tabular-data-file data.txt --initial-centroids initial.txt`
 
 which should show the cluster assignments
 
@@ -102,9 +102,9 @@ which should show the cluster assignments
 If you want the script to also show the centroids,
 you can specify an output file using the command
 
-`big-data-kmeans.py --niters 2
+`big-data-kmeans.py --maxiters 2
 	--tabular-data-file data.txt
-	--initial initial.txt
+	--initial-centroids initial.txt
 	--centroids-out centroids.txt`
 
 which should write the centroids into a file that looks like
@@ -112,17 +112,22 @@ which should write the centroids into a file that looks like
 	1.250000000000000000e+00 1.500000000000000000e+00
 	3.899999999999999911e+00 5.099999999999999645e+00
 
+
+troubleshooting
+---------------
+
 If the script is giving you errors then you can try checking
 its command line options using the command
 
 `big-data-kmeans.py -h`
 
 which should show something like
-
+	
 	usage: big-data-kmeans.py [-h]
 				  (--nclusters NCLUSTERS | --initial-centroids INITIAL_CENTROIDS)
+				  [--allow-cluster-loss | --error-on-cluster-loss | --return-on-cluster-loss | --random-restart-on-cluster-loss]
 				  (--tabular-data-file TABULAR_DATA_FILE | --hdf-data-file HDF_DATA_FILE)
-				  --niters NITERS
+				  [--maxiters MAXITERS] [--maxrestarts MAXRESTARTS]
 				  [--hdf-dataset-name HDF_DATASET_NAME]
 				  [--labels-out LABELS_OUT]
 				  [--centroids-out CENTROIDS_OUT]
@@ -137,13 +142,24 @@ which should show something like
 				use this many clusters
 	  --initial-centroids INITIAL_CENTROIDS
 				each row of this optional file is an initial centroid
+	  --allow-cluster-loss  use this flag if you can tolerate some empty clusters
+	  --error-on-cluster-loss
+				cluster loss raises an error
+	  --return-on-cluster-loss
+				cluster loss immediately returns the previous
+				clustering
+	  --random-restart-on-cluster-loss
+				restart with random centroids after a cluster loss
 	  --tabular-data-file TABULAR_DATA_FILE
 				each row of this large tabular text file is an
 				observation
 	  --hdf-data-file HDF_DATA_FILE
 				each row of a dataset in this hdf file is an
 				observation
-	  --niters NITERS       do this many iterations of the Lloyd algorithm
+	  --maxiters MAXITERS   say that the kmeans has converged after this many
+				iterations
+	  --maxrestarts MAXRESTARTS
+				allow this many random restarts to avoid cluster loss
 	  --hdf-dataset-name HDF_DATASET_NAME
 				specify the name of the dataset within the hdf data
 				file
@@ -155,3 +171,4 @@ which should show something like
 but it will probably be slightly different,
 because I find it unlikely that I will keep this documentation
 synchronized with the actual behavior of the program.
+

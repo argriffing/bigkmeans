@@ -28,6 +28,12 @@ def pos_int(x):
         raise argparse.ArgumentTypeError('value must be a positive integer')
     return x
 
+def nonneg_int(x):
+    x = int(x)
+    if x < 0:
+        raise argparse.ArgumentTypeError('value must be a non-negative integer')
+    return x
+
 
 def main(args):
 
@@ -44,9 +50,11 @@ def main(args):
         with open(args.tabular_data_file) as data_stream:
             guess, centroids, labels = bigkmeans.kmeans_ooc(
                     data_stream,
-                    args.niters,
                     centroids=guess,
                     nclusters=args.nclusters,
+                    on_cluster_loss=args.on_cluster_loss,
+                    maxiters=args.maxiters,
+                    maxrestarts=args.maxrestarts,
                     )
     elif args.hdf_data_file:
         if not h5py:
@@ -66,9 +74,11 @@ def main(args):
         dset = f[args.hdf_dataset_name]
         guess, centroids, labels = bigkmeans.kmeans_hdf(
                 dset,
-                args.niters,
                 centroids=guess,
                 nclusters=args.nclusters,
+                on_cluster_loss=args.on_cluster_loss,
+                maxiters=args.maxiters,
+                maxrestarts=args.maxrestarts,
                 )
         f.close()
 
@@ -95,6 +105,33 @@ if __name__ == '__main__':
     centroid_init.add_argument('--initial-centroids',
             help='each row of this optional file is an initial centroid')
 
+    # how do we react to cluster loss
+    cluster_loss = parser.add_mutually_exclusive_group()
+    cluster_loss.add_argument(
+            '--allow-cluster-loss',
+            action='store_const',
+            dest='on_cluster_loss',
+            const=bigkmeans.ignore_cluster_loss,
+            help='use this flag if you can tolerate some empty clusters')
+    cluster_loss.add_argument(
+            '--error-on-cluster-loss',
+            action='store_const',
+            dest='on_cluster_loss',
+            const=bigkmeans.error_on_cluster_loss,
+            help='cluster loss raises an error')
+    cluster_loss.add_argument(
+            '--return-on-cluster-loss',
+            action='store_const',
+            dest='on_cluster_loss',
+            const=bigkmeans.return_on_cluster_loss,
+            help='cluster loss immediately returns the previous clustering')
+    cluster_loss.add_argument(
+            '--random-restart-on-cluster-loss',
+            action='store_const',
+            dest='on_cluster_loss',
+            const=bigkmeans.retry_after_cluster_loss,
+            help='restart with random centroids after a cluster loss')
+
     # define the data file
     data_defn = parser.add_mutually_exclusive_group(required=True)
     data_defn.add_argument('--tabular-data-file',
@@ -102,8 +139,10 @@ if __name__ == '__main__':
     data_defn.add_argument('--hdf-data-file',
             help='each row of a dataset in this hdf file is an observation')
 
-    parser.add_argument('--niters', type=pos_int, required=True,
-            help='do this many iterations of the Lloyd algorithm')
+    parser.add_argument('--maxiters', type=pos_int,
+            help='say that the kmeans has converged after this many iterations')
+    parser.add_argument('--maxrestarts', type=nonneg_int,
+            help='allow this many random restarts to avoid cluster loss')
 
     parser.add_argument('--hdf-dataset-name',
             help='specify the name of the dataset within the hdf data file')
@@ -112,4 +151,6 @@ if __name__ == '__main__':
     parser.add_argument('--centroids-out',
             help='write the centroids to this file')
     main(parser.parse_args())
+
+
 

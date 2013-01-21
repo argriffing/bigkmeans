@@ -13,6 +13,7 @@ but for now I think that it is simple enough
 that a function-oriented is better.
 """
 
+import warnings
 import random
 
 import numpy as np
@@ -25,11 +26,10 @@ __all__ = [
         'kmeans',
         'kmeans_hdf',
         'kmeans_ooc',
-        #'ALLOW_CLUSTER_LOSS',
-        #'RANDOM_RESTART_ON_CLUSTER_LOSS',
-        #'ERROR_ON_CLUSTER_LOSS',
+        'ClusterLossError',
         'ignore_cluster_loss',
-        'complain_bitterly_about_cluster_loss',
+        'error_on_cluster_loss',
+        'return_on_cluster_loss',
         'retry_after_cluster_loss',
         ]
 
@@ -42,11 +42,6 @@ __all__ = [
 # a chunk of memory that is too big for the RAM.
 ROWS_PER_BLOCK = 8192
 
-# define the things to do when one or more clusters are lost
-#ALLOW_CLUSTER_LOSS = 'allow-cluster-loss'
-#RANDOM_RESTART_ON_CLUSTER_LOSS = 'random-restart-on-cluster-loss'
-#ERROR_ON_CLUSTER_LOSS = 'error-on-cluster-loss'
-
 
 class ClusterLossError(Exception):
     pass
@@ -54,12 +49,18 @@ class ClusterLossError(Exception):
 class RecoverableClusterLossError(Exception):
     pass
 
+class ReturnClusterLossError(Exception):
+    pass
+
 
 def ignore_cluster_loss():
     pass
 
-def complain_bitterly_about_cluster_loss():
+def error_on_cluster_loss():
     raise ClusterLossError('empty cluster')
+
+def return_on_cluster_loss():
+    raise ReturnClusterLossError
 
 def retry_after_cluster_loss():
     raise RecoverableClusterLossError
@@ -70,28 +71,41 @@ def retry_after_cluster_loss():
 # These functions are trying to be like an object oriented API.
 
 def kmeans(
-        data, niters,
-        centroids=None, nclusters=None, on_cluster_loss=ignore_cluster_loss):
+        data,
+        centroids=None, nclusters=None, on_cluster_loss=None,
+        maxiters=None, maxrestarts=None,
+        ):
     return generic_kmeans(
-            data, niters,
+            data,
             np_get_shape, np_get_random_guess, np_accum,
-            centroids, nclusters, on_cluster_loss)
+            centroids, nclusters, on_cluster_loss,
+            maxiters, maxrestarts,
+            )
+
 
 def kmeans_hdf(
-        dset, niters,
-        centroids=None, nclusters=None, on_cluster_loss=ignore_cluster_loss):
+        dset,
+        centroids=None, nclusters=None, on_cluster_loss=None,
+        maxiters=None, maxrestarts=None,
+        ):
     return generic_kmeans(
-            dset, niters,
+            dset,
             hdf_get_shape, hdf_get_random_guess, hdf_accum,
-            centroids, nclusters, on_cluster_loss)
+            centroids, nclusters, on_cluster_loss,
+            maxiters, maxrestarts,
+            )
 
 def kmeans_ooc(
-        data_stream, niters,
-        centroids=None, nclusters=None, on_cluster_loss=ignore_cluster_loss):
+        data_stream,
+        centroids=None, nclusters=None, on_cluster_loss=None,
+        maxiters=None, maxrestarts=None,
+        ):
     return generic_kmeans(
-            data_stream, niters,
+            data_stream,
             fstream_get_shape, fstream_get_random_guess, fstream_accum,
-            centroids, nclusters, on_cluster_loss)
+            centroids, nclusters, on_cluster_loss,
+            maxiters, maxrestarts,
+            )
 
 
 ##############################################################################
@@ -119,18 +133,18 @@ def fstream_get_shape(data_object):
 
 def np_get_random_guess(data_object, M, N, nclusters):
     indices = sorted(random.sample(xrange(M), nclusters))
-    return indices[observation_indices, :]
+    return data_object[indices, :]
 
 def hdf_get_random_guess(data_object, M, N, nclusters):
     indices = sorted(random.sample(xrange(M), nclusters))
-    return indices[observation_indices, :]
+    return data_object[indices, :]
 
 def fstream_get_random_guess(data_object, M, N, nclusters):
     data_object.seek(0)
     indices = sorted(random.sample(xrange(M), nclusters))
     guess_lines = []
     for i, line in enumerate(data_object):
-        if i == sampled_indices[len(guess_lines)]:
+        if i == indices[len(guess_lines)]:
             guess_lines.append(line)
             if len(guess_lines) == nclusters:
                 break
@@ -208,9 +222,11 @@ def fstream_accum(
 # This could be turned into an object oriented thing later.
 
 def generic_kmeans(
-        data_object, niters,
+        data_object,
         fn_get_shape, fn_get_random_guess, fn_accum,
-        centroids=None, nclusters=None, on_cluster_loss=ignore_cluster_loss):
+        centroids=None, nclusters=None, on_cluster_loss=None,
+        maxiters=None, maxrestarts=None,
+        ):
     """
     @param data_object: a numpy array or hdf5 dataset or open text stream
     @param fn_get_shape: a function that gets the shape of the data
@@ -219,8 +235,11 @@ def generic_kmeans(
     @param centroids: initial centroids
     @param nclusters: number of clusters requested
     @param on_cluster_loss: call this when a cluster loss is detected
+    @param maxiters: call the clustering successful after this many iterations
+    @param maxrestarts: allow this many attempts to find nonempy clusters
+    @return: guess_centroids, final_centroids, labels
     """
-    if niters < 1:
+    if (maxiters is not None) and (maxiters < 1):
         raise Exception('not enough iterations')
     if (centroids, nclusters).count(None) != 1:
         raise Exception(
@@ -228,19 +247,30 @@ def generic_kmeans(
                 'or a requested number of clusters '
                 'must be provided, but not both')
     M, N = fn_get_shape(data_object)
+    if centroids is not None:
+        nclusters = centroids.shape[0]
+    if nclusters > M:
+        raise Exception(
+                'the number of requested clusters (%s) '
+                'exceeds the number of observations (%s)' % (nclusters, M))
     if centroids is None:
         centroids = fn_get_random_guess(data_object, M, N, nclusters)
-    else:
-        nclusters = centroids.shape[0]
 
-    #TODO: begin loop for cluster-loss restarting
+    # save the labels so that we can detect convergence
+    prev_labels = None
 
     curr_cluster_sizes = np.ones(nclusters, dtype=int)
     next_cluster_sizes = np.zeros(nclusters, dtype=int)
     curr_centroids = centroids.copy()
     next_centroids = centroids.copy()
 
-    for i in range(niters):
+    restart_count = 0
+    iteration_count = 0
+    while True:
+
+        # check if we are forced to stop because of the iteration cap
+        if (maxiters is not None) and (iteration_count >= maxiters):
+            break
 
         label_list = []
         next_centroids.fill(0)
@@ -255,7 +285,37 @@ def generic_kmeans(
         if all(next_cluster_sizes):
             next_centroids /= next_cluster_sizes[:, np.newaxis]
         else:
-            on_cluster_loss()
+            try:
+                if on_cluster_loss:
+                    on_cluster_loss()
+            except ReturnClusterLossError as e:
+                # This is a signal to return the previous info.
+                if not prev_labels:
+                    raise ClusterLossError(
+                            'no non-empty labeling was ever found')
+                return (
+                        centroids,
+                        curr_centroids,
+                        np.array(prev_labels, dtype=int),
+                        )
+            except RecoverableClusterLossError as e:
+                # This is a signal to restart with a new guess.
+                if maxrestarts is not None:
+                    if restart_count >= maxrestarts:
+                        raise Exception(
+                                'hit the maxrestart cap without '
+                                'finding a clustering that did not include '
+                                'empty clusters')
+                warnings.warn('restarting after cluster loss')
+                centroids = fn_get_random_guess(data_object, M, N, nclusters)
+                prev_labels = None
+                curr_cluster_sizes = np.ones(nclusters, dtype=int)
+                next_cluster_sizes = np.zeros(nclusters, dtype=int)
+                curr_centroids = centroids.copy()
+                next_centroids = centroids.copy()
+                iteration_count = 0
+                restart_count += 1
+                continue
             for j in range(nclusters):
                 if next_cluster_sizes[j]:
                     next_centroids[j] /= next_cluster_sizes[j]
@@ -265,7 +325,13 @@ def generic_kmeans(
         curr_cluster_sizes, next_cluster_sizes = (
                 next_cluster_sizes, curr_cluster_sizes)
 
-    #TODO: end loop for cluster-loss restarting
+        # if the labels match the prev labels then we are done
+        if (prev_labels is not None) and (prev_labels == label_list):
+            break
+
+        prev_labels = label_list
+
+        iteration_count += 1
 
     return centroids, curr_centroids, np.array(label_list, dtype=int)
 
