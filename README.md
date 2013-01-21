@@ -1,41 +1,33 @@
 bigkmeans
 =========
 
-This is a Cython-enhanced out-of-core Forgy-initialized
-Lloyd's algorithm kmeans implementation for Big Data.
+An implementation of Lloyd's kmeans clustering algorithm
+for data sets that contain many points.
 
 
-why this program is so awesome
-------------------------------
+when to use something else
+--------------------------
 
-Theoretically it will work on data files
-that contain many observations.
-Other programs that try to hold all of the data in memory at once
-will have a bad time if the data is huge enough.
-But this program will only use a small amount of memory
-even when the number of observations is large.
-
-
-if you have small data then you should use something else
----------------------------------------------------------
-
-If you only have a few data points that you want to cluster,
-then using this program would be kind of dumb;
+If you can hold all of the data in RAM
 you should use R or something instead.
 
  * R -- http://stat.ethz.ch/R-manual/R-devel/library/stats/html/kmeans.html
  * SciPy (Python) -- http://docs.scipy.org/doc/scipy/reference/cluster.vq.html
+ * MATLAB -- http://www.mathworks.com/help/stats/kmeans.html
+
+But if your computer chokes when you tell it to load your data,
+then this python package and its associated scripts might help you.
 
 
-required dependencies
----------------------
+requirements
+------------
 
  * [Python](http://python.org/) 2.7+ (but not 3.x)
  * [NumPy](http://www.numpy.org/)
 
 
-optional dependencies
----------------------
+optional python packages
+------------------------
 
 To reduce CPU slowness, install at least one of the following:
  * [pyvqcore](https://github.com/argriffing/pyvqcore)
@@ -50,17 +42,17 @@ data files and install this python package:
 standard installation
 ---------------------
 
-This is a python package and an associated script.
-The install is a standard distutils-based installation
-as described here -- http://docs.python.org/2/install/index.html .
+You can install bigkmeans using the standard distutils installation procedure
+for python packages with setup.py scripts,
+as explained [here](http://docs.python.org/2/install/index.html).
+
 
 install using pip
 -----------------
 
-One of several python installation helpers is called
-pip -- http://www.pip-installer.org/ .
-You can use this to install directly from github
-using the command
+One of several Python package installation helpers is called
+[pip](http://www.pip-installer.org/).
+You can use this to install directly from github using the command
 
 `$ pip install --user https://github.com/argriffing/bigkmeans/zipball/master`
 
