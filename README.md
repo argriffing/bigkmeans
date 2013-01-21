@@ -28,18 +28,47 @@ you should use R or something instead.
 
 
 how to install
---------------
+==============
 
-This is a python package and an associated script.
-The install is a standard distutils-based installation
-as described here -- http://docs.python.org/2/install/index.html .
-It requires newish versions of the following ingredients:
+dependencies
+------------
+
+You will need newish versions of the following projects:
 
  * Python 2.7+ (but not 3.x) -- http://python.org/
  * Cython -- http://cython.org/
  * Numpy -- http://www.numpy.org/
 
-Presumably all of these dependencies exist for most operating systems.
+These should all be available for most operating systems.
+
+standard installation
+---------------------
+
+This is a python package and an associated script.
+The install is a standard distutils-based installation
+as described here -- http://docs.python.org/2/install/index.html .
+
+install using pip
+-----------------
+
+One of several python installation helpers is called
+pip -- http://www.pip-installer.org/ .
+You can use this to install directly from github
+using the following command.
+
+`pip install https://github.com/argriffing/bigkmeans/zipball/master`
+
+You might have to separately install pip itself,
+and the pip command above may need to be
+run using some kind of administrator privileges.
+
+The nice thing about using pip instead of the standard installer
+is that it allows you to easily uninstall the bigkmeans using the command
+
+`pip uninstall bigkmeans`
+
+if my kmeans clustering program is not working for you for some reason,
+which frankly will probably be the case.
 
 
 optional packages required for advanced usage
@@ -59,7 +88,7 @@ package has been installed.
 
 
 basic example
--------------
+=============
 
 The web page
 http://mnemstudio.org/clustering-k-means-example-1.htm
@@ -114,7 +143,7 @@ which should write the centroids into a file that looks like
 
 
 troubleshooting
----------------
+===============
 
 If the script is giving you errors then you can try checking
 its command line options using the command
