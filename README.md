@@ -27,15 +27,24 @@ you should use R or something instead.
  * SciPy (Python) -- http://docs.scipy.org/doc/scipy/reference/cluster.vq.html
 
 
-dependencies
-------------
+required dependencies
+---------------------
 
  * [Python](http://python.org/) 2.7+ (but not 3.x)
  * [NumPy](http://www.numpy.org/)
- * at least one of
-    - [pyvqcore](https://github.com/argriffing/pyvqcore)
-    - [SciPy](http://www.scipy.org/)
-    - [EPD](http://www.enthought.com/products/epd.php)
+
+
+optional dependencies
+---------------------
+
+To reduce CPU slowness, install at least one of the following:
+ * [pyvqcore](https://github.com/argriffing/pyvqcore)
+ * [SciPy](http://www.scipy.org/)
+ * [EPD](http://www.enthought.com/products/epd.php)
+
+To reduce I/O slowness, use [hdf5](http://www.hdfgroup.org/HDF5/)
+data files and install this python package:
+ * [h5py](http://www.h5py.org/)
 
 
 standard installation
@@ -58,20 +67,6 @@ using the command
 which can be reverted by
 
 `$ pip uninstall bigkmeans`
-
-
-optional packages required for advanced usage
-------------------------------------
-
-Running kmeans on a long sequence of observations may be I/O limited.
-To reduce the I/O slowness, you can use HDF technologies
-( http://www.hdfgroup.org/ )
-to store your data in a way that allows faster processing
-than tabular text formats.
-Support for this format is enabled if the h5py
-package has been installed.
-
- * h5py -- http://www.h5py.org/
 
 
 testing the installation

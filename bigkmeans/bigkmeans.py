@@ -18,6 +18,8 @@ import random
 
 import numpy as np
 
+import lloyd
+
 try:
     import pyvqcore
 except ImportError:
@@ -289,9 +291,11 @@ def generic_kmeans(
                 curr_cluster_sizes, next_cluster_sizes,
                 )
 
-        if all(next_cluster_sizes):
-            next_centroids /= next_cluster_sizes[:, np.newaxis]
-        else:
+        # get the lost and the okay cluster indices
+        lost_indices = [i for i, x in enumerate(next_cluster_sizes) if not x]
+        okay_indices = [i for i, x in enumerate(next_cluster_sizes) if x]
+
+        if any(lost_indices):
             try:
                 if on_cluster_loss:
                     on_cluster_loss()
@@ -323,9 +327,16 @@ def generic_kmeans(
                 iteration_count = 0
                 restart_count += 1
                 continue
-            for j in range(nclusters):
-                if next_cluster_sizes[j]:
-                    next_centroids[j] /= next_cluster_sizes[j]
+
+        # Give lost clusters their old centroids,
+        # and normalize the centroids of the clusters that were not lost.
+        if any(lost_indices):
+            next_centroids[lost_indices, :] = curr_centroids[
+                    lost_indices, :]
+            next_centroids[okay_indices, :] /= next_cluster_sizes[okay_indices][
+                    :, np.newaxis]
+        else:
+            next_centroids /= next_cluster_sizes[:, np.newaxis]
 
         curr_centroids, next_centroids = (
                 next_centroids, curr_centroids)
@@ -357,38 +368,22 @@ def lloyd_update_block(
     @return: residue sum of squares
     """
 
-    #FIXME: This function should eventually be broken into three
-    #       separate functions which are unit-tested against each other.
+    #FIXME: these three separate functions should be unit-tested
+    #       against each other.
 
-    # Try using a custom C extension if available.
     if pyvqcore:
-        rss = pyvqcore.update_labels(
-                data, curr_centroids, labels,
-                curr_cluster_sizes, next_cluster_sizes)
-        pyvqcore.update_centroids(data, next_centroids, labels)
-
-    # Fall back to a scipy.cluster function if available.
-    # This is slightly less vectorized, but still OK.
+        # Try using a custom C extension if available.
+        fn = lloyd.update_block_pyvqcore
     elif scipy_cluster:
-
-        # Get the codebook index array and a distance array.
-        index_arr, distortion_arr = scipy_cluster.vq.vq(data, curr_centroids)
-        rss = sum(np.square(distortion_arr))
-
-        # update the labels and the next cluster sizes
-        labels[...] = index_arr
-        for cluster_index in labels:
-            next_cluster_sizes[cluster_index] += 1
-
-        # update the next centroids
-        for i, row in enumerate(data):
-            next_centroids[labels[i]] += row
-
-    # Fall back to a pure python and numpy implementation
-    # as a last resort.
+        # Fall back to a scipy.cluster function if available.
+        # This is slightly less vectorized, but still OK.
+        fn = lloyd.update_block_scipy
     else:
-        raise NotImplementedError
+        # Fall back to a pure python and numpy implementation
+        # as a last resort.
+        fn = lloyd.update_block_python
 
-    # return the residue sum of squares
-    return rss
+    return fn(
+            data, curr_centroids, next_centroids, labels,
+            curr_cluster_sizes, next_cluster_sizes)
 
