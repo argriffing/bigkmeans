@@ -13,6 +13,7 @@ but for now I think that it is simple enough
 that a function-oriented is better.
 """
 
+import math
 import warnings
 import random
 
@@ -240,6 +241,37 @@ def fstream_accum(
 # Define a generic kmeans that uses functions specific to the data type.
 # This could be turned into an object oriented thing later.
 
+def generic_random_init(
+        data_object, M, N, nclusters,
+        fn_get_random_guess, fn_accum,
+        fn_block_update,
+        ):
+    """
+    Do an initial kmeans with the square root of the number of observations.
+    @param data_object: a numpy array or hdf5 dataset or open text stream
+    @param M: total number of observations
+    @param N: dimensionality of the space
+    @param nclusters: number of clusters requested
+    @param fn_get_random_guess: a function that randomly reinitializes clusters
+    @param fn_accum: a function that customizes the core of the iteration
+    @param fn_block_update: function that defines the lloyd block update
+    @return: centroids
+    """
+    if M < nclusters:
+        raise ValueError
+    elif M < nclusters * nclusters:
+        return fn_get_random_guess(data_object, M, N, nclusters)
+    else:
+        nclusters_big = nclusters + int(math.floor(math.sqrt(M - nclusters)))
+        subdata = fn_get_random_guess(data_object, M, N, nclusters_big)
+        subdata_guess, subdata_centroids, subdata_labels = kmeans(
+                subdata,
+                nclusters=nclusters,
+                fn_block_update=fn_block_update,
+                )
+        return subdata_centroids
+
+
 def generic_kmeans(
         data_object,
         fn_get_shape, fn_get_random_guess, fn_accum,
@@ -285,7 +317,10 @@ def generic_kmeans(
                 'the number of requested clusters (%s) '
                 'exceeds the number of observations (%s)' % (nclusters, M))
     if centroids is None:
-        centroids = fn_get_random_guess(data_object, M, N, nclusters)
+        centroids = generic_random_init(
+                data_object, M, N, nclusters,
+                fn_get_random_guess, fn_accum,
+                fn_block_update)
 
     # save the labels so that we can detect convergence
     prev_labels = None
@@ -341,7 +376,10 @@ def generic_kmeans(
                                 'finding a clustering that did not include '
                                 'empty clusters')
                 warnings.warn('restarting after cluster loss')
-                centroids = fn_get_random_guess(data_object, M, N, nclusters)
+                centroids = generic_random_init(
+                        data_object, M, N, nclusters,
+                        fn_get_random_guess, fn_accum,
+                        fn_block_update)
                 prev_labels = None
                 curr_cluster_sizes = np.ones(nclusters, dtype=int)
                 next_cluster_sizes = np.zeros(nclusters, dtype=int)
