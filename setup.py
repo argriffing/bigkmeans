@@ -9,6 +9,9 @@ from distutils.core import setup
 setup(
         name = 'bigkmeans',
         version = '0.1',
-        packages=['bigkmeans'],
+        packages=[
+            'bigkmeans',
+            'bigkmeans.tests',
+            ],
         scripts = ['bin/big-data-kmeans.py'],
         )
