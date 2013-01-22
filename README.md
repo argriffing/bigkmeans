@@ -64,7 +64,29 @@ which can be reverted by
 testing the installation
 ------------------------
 
+To test the installation of the python package, try running the command
+
 `$ python -c "import bigkmeans; bigkmeans.test()"`
+
+on your command line,
+where the `$` is my notation for a shell prompt rather than
+something that you are supposed to type.
+Your command line prompt might look different.
+Also your command to run Python might need to be different;
+for example you might need to use something like
+`Python27.exe` or something else depending on your environment.
+To test the installation of the script, try running the command
+
+`$ big-data-kmeans.py -h`
+
+on your command line.
+This might work if you've installed the package
+using administrative privileges.
+Otherwise you might try a command like
+
+`$ python ~/.local/bin/big-data-kmeans.py -h`
+
+which might work if you've installed the package using the pip `--user` flag.
 
 
 basic example
