@@ -50,7 +50,7 @@ def main(args):
                 'scipy' : bigkmeans.lloyd.update_block_scipy,
                 'python' : bigkmeans.lloyd.update_block_python,
                 }
-        fn_block_update = inner_loop_dict[fn_block_update]
+        fn_block_update = inner_loop_dict[args.fn_block_update]
 
     # Open the data file and do the kmeans clustering.
     # Note that we deliberately disallow using stdin
