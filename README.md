@@ -154,52 +154,55 @@ its command line options using the command
 
 which should show something like
 	
-	usage: big-data-kmeans.py [-h]
-				  (--nclusters NCLUSTERS | --initial-centroids INITIAL_CENTROIDS)
-				  [--allow-cluster-loss | --error-on-cluster-loss | --return-on-cluster-loss | --random-restart-on-cluster-loss]
-				  (--tabular-data-file TABULAR_DATA_FILE | --hdf-data-file HDF_DATA_FILE)
-				  [--maxiters MAXITERS] [--maxrestarts MAXRESTARTS]
-				  [--hdf-dataset-name HDF_DATASET_NAME]
-				  [--labels-out LABELS_OUT]
-				  [--centroids-out CENTROIDS_OUT]
+    usage: big-data-kmeans.py [-h]
+                              (--nclusters NCLUSTERS | --initial-centroids INITIAL_CENTROIDS)
+                              [--allow-cluster-loss | --error-on-cluster-loss | --return-on-cluster-loss | --random-restart-on-cluster-loss]
+                              (--tabular-data-file TABULAR_DATA_FILE | --hdf-data-file HDF_DATA_FILE)
+                              [--maxiters MAXITERS] [--maxrestarts MAXRESTARTS]
+                              [--verbose] [--inner-loop {pyvqcore,scipy,python}]
+                              [--hdf-dataset-name HDF_DATASET_NAME]
+                              [--labels-out LABELS_OUT]
+                              [--centroids-out CENTROIDS_OUT]
 
-	This is a script that uses the bigkmeans python module. The bigkmeans python
-	module in turn uses the bigkmeanscore cython extension module. The cluster
-	centroids are chosen at random from the observations.
+    This is a script that uses the bigkmeans python module. The bigkmeans python
+    module in turn uses the bigkmeanscore cython extension module. The cluster
+    centroids are chosen at random from the observations.
 
-	optional arguments:
-	  -h, --help            show this help message and exit
-	  --nclusters NCLUSTERS
-				use this many clusters
-	  --initial-centroids INITIAL_CENTROIDS
-				each row of this optional file is an initial centroid
-	  --allow-cluster-loss  use this flag if you can tolerate some empty clusters
-	  --error-on-cluster-loss
-				cluster loss raises an error
-	  --return-on-cluster-loss
-				cluster loss immediately returns the previous
-				clustering
-	  --random-restart-on-cluster-loss
-				restart with random centroids after a cluster loss
-	  --tabular-data-file TABULAR_DATA_FILE
-				each row of this large tabular text file is an
-				observation
-	  --hdf-data-file HDF_DATA_FILE
-				each row of a dataset in this hdf file is an
-				observation
-	  --maxiters MAXITERS   say that the kmeans has converged after this many
-				iterations
-	  --maxrestarts MAXRESTARTS
-				allow this many random restarts to avoid cluster loss
-	  --hdf-dataset-name HDF_DATASET_NAME
-				specify the name of the dataset within the hdf data
-				file
-	  --labels-out LABELS_OUT
-				write the labels to this file (default is stdout)
-	  --centroids-out CENTROIDS_OUT
-				write the centroids to this file
+    optional arguments:
+      -h, --help            show this help message and exit
+      --nclusters NCLUSTERS
+                            use this many clusters
+      --initial-centroids INITIAL_CENTROIDS
+                            each row of this optional file is an initial centroid
+      --allow-cluster-loss  use this flag if you can tolerate some empty clusters
+      --error-on-cluster-loss
+                            cluster loss raises an error
+      --return-on-cluster-loss
+                            cluster loss immediately returns the previous
+                            clustering
+      --random-restart-on-cluster-loss
+                            restart with random centroids after a cluster loss
+      --tabular-data-file TABULAR_DATA_FILE
+                            each row of this large tabular text file is an
+                            observation
+      --hdf-data-file HDF_DATA_FILE
+                            each row of a dataset in this hdf file is an
+                            observation
+      --maxiters MAXITERS   say that the kmeans has converged after this many
+                            iterations
+      --maxrestarts MAXRESTARTS
+                            allow this many random restarts to avoid cluster loss
+      --verbose             spam more
+      --inner-loop {pyvqcore,scipy,python}
+                            explicitly specify a kmeans inner loop implementation
+      --hdf-dataset-name HDF_DATASET_NAME
+                            specify the name of the dataset within the hdf data
+                            file
+      --labels-out LABELS_OUT
+                            write the labels to this file (default is stdout)
+      --centroids-out CENTROIDS_OUT
+                            write the centroids to this file
 
 but it will probably be slightly different,
 because I find it unlikely that I will keep this documentation
 synchronized with the actual behavior of the program.
-
