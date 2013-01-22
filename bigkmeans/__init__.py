@@ -4,3 +4,6 @@ from numpy.testing import Tester
 test = Tester().test
 
 from bigkmeans import *
+
+import lloyd
+

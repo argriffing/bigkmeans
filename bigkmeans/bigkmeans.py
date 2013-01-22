@@ -13,6 +13,7 @@ but for now I think that it is simple enough
 that a function-oriented is better.
 """
 
+import sys
 import math
 import warnings
 import random
@@ -86,6 +87,7 @@ def kmeans(
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
         fn_block_update=None,
+        verbose=None,
         ):
     return generic_kmeans(
             data,
@@ -93,6 +95,7 @@ def kmeans(
             centroids, nclusters, on_cluster_loss,
             maxiters, maxrestarts,
             fn_block_update,
+            verbose,
             )
 
 
@@ -101,6 +104,7 @@ def kmeans_hdf(
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
         fn_block_update=None,
+        verbose=None,
         ):
     return generic_kmeans(
             dset,
@@ -108,6 +112,7 @@ def kmeans_hdf(
             centroids, nclusters, on_cluster_loss,
             maxiters, maxrestarts,
             fn_block_update,
+            verbose,
             )
 
 def kmeans_ooc(
@@ -115,6 +120,7 @@ def kmeans_ooc(
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
         fn_block_update=None,
+        verbose=None,
         ):
     return generic_kmeans(
             data_stream,
@@ -122,6 +128,7 @@ def kmeans_ooc(
             centroids, nclusters, on_cluster_loss,
             maxiters, maxrestarts,
             fn_block_update,
+            verbose,
             )
 
 
@@ -278,6 +285,7 @@ def generic_kmeans(
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
         fn_block_update=None,
+        verbose=None,
         ):
     """
     @param data_object: a numpy array or hdf5 dataset or open text stream
@@ -290,6 +298,7 @@ def generic_kmeans(
     @param maxiters: call the clustering successful after this many iterations
     @param maxrestarts: allow this many attempts to find nonempy clusters
     @param fn_block_update: function that defines the lloyd block update
+    @param verbose: True if you like spam
     @return: guess_centroids, final_centroids, labels
     """
     if (maxiters is not None) and (maxiters < 1):
@@ -387,6 +396,8 @@ def generic_kmeans(
                 next_centroids = centroids.copy()
                 iteration_count = 0
                 restart_count += 1
+                if verbose:
+                    print >> sys.stderr, 'restarts:', restart_count
                 continue
 
         # Give lost clusters their old centroids,
@@ -411,5 +422,7 @@ def generic_kmeans(
         prev_labels = label_list
 
         iteration_count += 1
+        if verbose:
+            print >> sys.stderr, 'iterations:', iteration_count
 
     return centroids, curr_centroids, np.array(label_list, dtype=int)

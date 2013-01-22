@@ -42,6 +42,16 @@ def main(args):
     if args.initial_centroids:
         guess = np.loadtxt(args.initial_centroids, dtype=float, ndmin=2)
 
+    # Optionally specify an inner loop implementation choice.
+    fn_block_update = None
+    if args.inner_loop:
+        inner_loop_dict = {
+                'pyvqcore' : bigkmeans.lloyd.update_block_pyvqcore,
+                'scipy' : bigkmeans.lloyd.update_block_scipy,
+                'python' : bigkmeans.lloyd.update_block_python,
+                }
+        fn_block_update = inner_loop_dict[fn_block_update]
+
     # Open the data file and do the kmeans clustering.
     # Note that we deliberately disallow using stdin
     # because we require that the stream can be restarted
@@ -55,6 +65,8 @@ def main(args):
                     on_cluster_loss=args.on_cluster_loss,
                     maxiters=args.maxiters,
                     maxrestarts=args.maxrestarts,
+                    fn_block_update=fn_block_update,
+                    verbose=args.verbose,
                     )
     elif args.hdf_data_file:
         if not h5py:
@@ -79,6 +91,8 @@ def main(args):
                 on_cluster_loss=args.on_cluster_loss,
                 maxiters=args.maxiters,
                 maxrestarts=args.maxrestarts,
+                fn_block_update=fn_block_update,
+                verbose=args.verbose,
                 )
         f.close()
 
@@ -144,6 +158,12 @@ if __name__ == '__main__':
     parser.add_argument('--maxrestarts', type=nonneg_int,
             help='allow this many random restarts to avoid cluster loss')
 
+    parser.add_argument('--verbose', action='store_true',
+            help='spam more')
+    parser.add_argument(
+            '--inner-loop',
+            choices=['pyvqcore', 'scipy', 'python'],
+            help='explicitly specify a kmeans inner loop implementation')
     parser.add_argument('--hdf-dataset-name',
             help='specify the name of the dataset within the hdf data file')
     parser.add_argument('--labels-out', default='-',
