@@ -3,7 +3,7 @@ from bigkmeans import *
 import lloyd
 
 # import this package so that nosetests can find our tests
-import test
+import tests
 
 
 # this testing idea is from algopy
