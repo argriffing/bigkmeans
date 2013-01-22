@@ -20,16 +20,17 @@ import numpy as np
 
 import lloyd
 
+#FIXME: import lazily?
+
 try:
     import pyvqcore
 except ImportError:
     pyvqcore = None
 
-if not pyvqcore:
-    try:
-        import scipy.cluster as scipy_cluster
-    except ImportError:
-        scipy_cluster = None
+try:
+    import scipy.cluster as scipy_cluster
+except ImportError:
+    scipy_cluster = None
 
 __all__ = [
         'kmeans',
@@ -83,12 +84,14 @@ def kmeans(
         data,
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
+        fn_block_update=None,
         ):
     return generic_kmeans(
             data,
             np_get_shape, np_get_random_guess, np_accum,
             centroids, nclusters, on_cluster_loss,
             maxiters, maxrestarts,
+            fn_block_update,
             )
 
 
@@ -96,24 +99,28 @@ def kmeans_hdf(
         dset,
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
+        fn_block_update=None,
         ):
     return generic_kmeans(
             dset,
             hdf_get_shape, hdf_get_random_guess, hdf_accum,
             centroids, nclusters, on_cluster_loss,
             maxiters, maxrestarts,
+            fn_block_update,
             )
 
 def kmeans_ooc(
         data_stream,
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
+        fn_block_update=None,
         ):
     return generic_kmeans(
             data_stream,
             fstream_get_shape, fstream_get_random_guess, fstream_accum,
             centroids, nclusters, on_cluster_loss,
             maxiters, maxrestarts,
+            fn_block_update,
             )
 
 
@@ -169,9 +176,10 @@ def np_accum(
         data_object, M, N, label_list,
         curr_centroids, next_centroids,
         curr_cluster_sizes, next_cluster_sizes,
+        fn_block_update,
         ):
     labels = np.empty(M, dtype=int)
-    rss = lloyd_update_block(
+    rss = fn_block_update(
             data_object, curr_centroids, next_centroids, labels,
             curr_cluster_sizes, next_cluster_sizes)
     label_list.extend(labels)
@@ -181,6 +189,7 @@ def hdf_accum(
         data_object, M, N, label_list,
         curr_centroids, next_centroids,
         curr_cluster_sizes, next_cluster_sizes,
+        fn_block_update,
         ):
     # process the data stream block by block
     block_index = 0
@@ -193,7 +202,7 @@ def hdf_accum(
         data = data_object[start : stop]
         M_block = data.shape[0]
         labels = np.empty(M_block, dtype=int)
-        rss += lloyd_update_block(
+        rss += fn_block_update(
                 data, curr_centroids, next_centroids, labels,
                 curr_cluster_sizes, next_cluster_sizes)
         label_list.extend(labels)
@@ -204,6 +213,7 @@ def fstream_accum(
         data_object, M, N, label_list,
         curr_centroids, next_centroids,
         curr_cluster_sizes, next_cluster_sizes,
+        fn_block_update,
         ):
     data_object.seek(0)
     rss = 0
@@ -219,7 +229,7 @@ def fstream_accum(
         data = np.reshape(flat_data, (-1, N))
         M_block = data.shape[0]
         labels = np.empty(M_block, dtype=int)
-        rss += lloyd_update_block(
+        rss += fn_block_update(
                 data, curr_centroids, next_centroids, labels,
                 curr_cluster_sizes, next_cluster_sizes)
         label_list.extend(labels)
@@ -235,6 +245,7 @@ def generic_kmeans(
         fn_get_shape, fn_get_random_guess, fn_accum,
         centroids=None, nclusters=None, on_cluster_loss=None,
         maxiters=None, maxrestarts=None,
+        fn_block_update=None,
         ):
     """
     @param data_object: a numpy array or hdf5 dataset or open text stream
@@ -246,6 +257,7 @@ def generic_kmeans(
     @param on_cluster_loss: call this when a cluster loss is detected
     @param maxiters: call the clustering successful after this many iterations
     @param maxrestarts: allow this many attempts to find nonempy clusters
+    @param fn_block_update: function that defines the lloyd block update
     @return: guess_centroids, final_centroids, labels
     """
     if (maxiters is not None) and (maxiters < 1):
@@ -255,6 +267,16 @@ def generic_kmeans(
                 'either the initial centroids '
                 'or a requested number of clusters '
                 'must be provided, but not both')
+    # If the inner loop vector quantization strategy
+    # has not been chosen explicitly,
+    # then pick the fastest one that is available to us.
+    if not fn_block_update:
+        if pyvqcore:
+            fn_block_update = lloyd.update_block_pyvqcore
+        elif scipy_cluster:
+            fn_block_update = lloyd.update_block_update_block_scipy
+        else:
+            fn_block_update = lloyd.update_block_python
     M, N = fn_get_shape(data_object)
     if centroids is not None:
         nclusters = centroids.shape[0]
@@ -289,6 +311,7 @@ def generic_kmeans(
                 data_object, M, N, label_list,
                 curr_centroids, next_centroids,
                 curr_cluster_sizes, next_cluster_sizes,
+                fn_block_update,
                 )
 
         # get the lost and the okay cluster indices
@@ -352,38 +375,3 @@ def generic_kmeans(
         iteration_count += 1
 
     return centroids, curr_centroids, np.array(label_list, dtype=int)
-
-
-
-def lloyd_update_block(
-        data, curr_centroids, next_centroids, labels,
-        curr_cluster_sizes, next_cluster_sizes):
-    """
-    @param data: an ndarray representing a data block of a few observations
-    @param curr_centroids: all current centroids
-    @param next_centroids: all next centroids (to be filled)
-    @param labels: data labels (to be filled)
-    @param curr_cluster_sizes: this is used only as an empty cluster mask
-    @param next_cluster_sizes: cluster sizes (to be filled)
-    @return: residue sum of squares
-    """
-
-    #FIXME: these three separate functions should be unit-tested
-    #       against each other.
-
-    if pyvqcore:
-        # Try using a custom C extension if available.
-        fn = lloyd.update_block_pyvqcore
-    elif scipy_cluster:
-        # Fall back to a scipy.cluster function if available.
-        # This is slightly less vectorized, but still OK.
-        fn = lloyd.update_block_scipy
-    else:
-        # Fall back to a pure python and numpy implementation
-        # as a last resort.
-        fn = lloyd.update_block_python
-
-    return fn(
-            data, curr_centroids, next_centroids, labels,
-            curr_cluster_sizes, next_cluster_sizes)
-

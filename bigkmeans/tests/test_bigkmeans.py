@@ -1,4 +1,3 @@
-
 from StringIO import StringIO
 import random
 import tempfile
@@ -7,6 +6,7 @@ import numpy as np
 from numpy import testing
 
 import bigkmeans
+import bigkmeans.lloyd
 
 try:
     import scipy.cluster as scipy_cluster
@@ -266,30 +266,49 @@ class Test_BigKmeans(testing.TestCase):
         np.savetxt(name_stream, data)
         f_stream = open(name_stream)
 
-        # get the scipy kmeans results
-        vq_final_clust, vq_labels = scipy_cluster.vq.kmeans2(
-                data, guess, maxiters)
+        # check results for various vector quantization inner loops
+        for fn_block_update in (
+                bigkmeans.lloyd.update_block_pyvqcore,
+                bigkmeans.lloyd.update_block_scipy,
+                bigkmeans.lloyd.update_block_python,
+                ):
 
-        # get the bigkmeans numpy results
-        np_init_clust, np_final_clust, np_labels = bigkmeans.kmeans(
-                data, centroids=guess, maxiters=maxiters,
-                on_cluster_loss=on_cluster_loss)
+            # get the scipy kmeans results
+            vq_final_clust, vq_labels = scipy_cluster.vq.kmeans2(
+                    data, guess, maxiters)
 
-        # get the bigkmeans hdf results
-        hdf_init_clust, hdf_final_clust, hdf_labels = bigkmeans.kmeans_hdf(
-                dset, centroids=guess, maxiters=maxiters,
-                on_cluster_loss=on_cluster_loss)
+            # get the bigkmeans numpy results
+            results = bigkmeans.kmeans(
+                    data, centroids=guess, maxiters=maxiters,
+                    on_cluster_loss=on_cluster_loss,
+                    fn_block_update=fn_block_update,
+                    )
+            np_init_clust, np_final_clust, np_labels = results
 
-        # get the bigkmeans tabular text-based out-of-core results
-        ooc_init_clust, ooc_final_clust, ooc_labels = bigkmeans.kmeans_ooc(
-                f_stream, centroids=guess, maxiters=maxiters,
-                on_cluster_loss=on_cluster_loss)
+            # get the bigkmeans hdf results
+            results = bigkmeans.kmeans_hdf(
+                    dset, centroids=guess, maxiters=maxiters,
+                    on_cluster_loss=on_cluster_loss,
+                    fn_block_update=fn_block_update,
+                    )
+            hdf_init_clust, hdf_final_clust, hdf_labels = results
 
-        # check that the outputs are the same for all methods
-        for final_clust in (np_final_clust, hdf_final_clust, ooc_final_clust):
-            testing.assert_allclose(vq_final_clust, final_clust)
-        for labels in (np_labels, hdf_labels, ooc_labels):
-            testing.assert_allclose(vq_labels, labels)
+            # get the bigkmeans tabular text-based out-of-core results
+            results = bigkmeans.kmeans_ooc(
+                    f_stream, centroids=guess, maxiters=maxiters,
+                    on_cluster_loss=on_cluster_loss,
+                    fn_block_update=fn_block_update,
+                    )
+            ooc_init_clust, ooc_final_clust, ooc_labels = results
+
+            # check that the outputs are the same for all methods
+            for labels, final_clust in (
+                    (np_labels, np_final_clust),
+                    (hdf_labels, hdf_final_clust),
+                    (ooc_labels, ooc_final_clust),
+                    ):
+                testing.assert_allclose(vq_final_clust, final_clust)
+                testing.assert_allclose(vq_labels, labels)
 
         # close the hdf file and the tabular data file
         f_hdf.close()
